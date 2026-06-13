@@ -1,0 +1,26 @@
+The sample data seeding has successfully finished! Here are the credentials you can now use to test the workflow for the three institutes:
+
+1. Karpagam Institute of Technology
+Admin Email: admin@karpagamtech.ac.in
+Admin Password: Admin@KIT2026!
+Faculty Example: faculty1@karpagamtech.ac.in (Password: Faculty1@KIT!) up to faculty10
+Student Example: 24kit001@karpagamtech.ac.in (Password: Student1@KIT!) up to 24kit050
+
+2. SRM Institute of Science and Technology
+Admin Email: admin@srmist.edu.in
+Admin Password: Admin@SRM2026!
+Faculty Example: faculty1@srmist.edu.in (Password: Faculty1@SRM!)
+Student Example: 24srm001@srmist.edu.in (Password: Student1@SRM!)
+
+3. Rajalakshmi Engineering College
+Admin Email: admin@rajalakshmi.edu.in
+Admin Password: Admin@REC2026!
+Faculty Example: faculty1@rajalakshmi.edu.in (Password: Faculty1@REC!)
+Student Example: 24rec001@rajalakshmi.edu.in (Password: Student1@REC!)
+
+Test Credentials
+All 8 institutes follow the same login pattern. Example for SSN College of Engineering (ssn):
+
+Admin: admin@ssn.edu.in / Admin@SSN2026!
+Faculty: faculty1@ssn.edu.in / Faculty1@SSN!
+Student: 24ssn001@ssn.edu.in / Student1@SSN!
