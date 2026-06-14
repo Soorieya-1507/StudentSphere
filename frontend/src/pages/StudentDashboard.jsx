@@ -1,148 +1,240 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
+import { motion } from 'framer-motion';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Target, Award, BookOpen, GraduationCap, Clock, FileText, CheckCircle2, TrendingUp } from 'lucide-react';
 import StudentProfileForm from '../components/StudentProfileForm';
 import AchievementUpload from '../components/AchievementUpload';
 import AchievementTimeline from '../components/AchievementTimeline';
-import QRCodeDisplay from '../components/QRCodeDisplay';
+import CareerDashboard from './CareerDashboard';
+import { toast } from 'react-toastify';
 
 export default function StudentDashboard() {
-  const [metrics, setMetrics] = useState({ completion_percentage: 0, uploaded_documents_count: 0, approval_status: 'NOT_STARTED', rejection_reason: null, public_profile_id: null });
-  const [achievements, setAchievements] = useState([]);
-  const [activeTab, setActiveTab] = useState('overview');
-
+  const [profile, setProfile] = useState(null);
+  const [timeline, setTimeline] = useState([]);
+  const [gpaData, setGpaData] = useState(null);
+  
   useEffect(() => {
-    fetchMetrics();
-    fetchAchievements();
+    fetchProfile();
+    fetchTimeline();
+    fetchGpaData();
   }, []);
 
-  const fetchMetrics = async () => {
+  const fetchProfile = async () => {
     try {
-      const res = await api.get('/dashboards/student');
-      setMetrics(res.data);
+      const res = await api.get('/profiles/student/me');
+      setProfile(res.data);
     } catch (err) {}
   };
 
-  const fetchAchievements = async () => {
+  const fetchTimeline = async () => {
     try {
-      const res = await api.get('/achievements/');
-      setAchievements(res.data);
+      const res = await api.get('/achievements');
+      setTimeline(res.data);
     } catch (err) {}
   };
 
-  if (activeTab === 'profile') {
-    return (
-      <div>
-        <button onClick={() => { setActiveTab('overview'); fetchMetrics(); }} className="mb-4 text-blue-600 hover:underline flex items-center font-medium">
-          ← Back to Dashboard
-        </button>
-        <StudentProfileForm />
-      </div>
-    );
-  }
-
-  const statusColors = {
-    'NOT_STARTED': 'bg-gray-100 text-gray-800',
-    'PENDING': 'bg-yellow-100 text-yellow-800',
-    'APPROVED': 'bg-green-100 text-green-800',
-    'REJECTED': 'bg-red-100 text-red-800'
+  const fetchGpaData = async () => {
+    try {
+      const res = await api.get('/gpa/me');
+      setGpaData(res.data);
+    } catch (err) {}
   };
 
-  const totalPoints = achievements.filter(a => a.status === 'APPROVED').reduce((sum, a) => sum + a.points_awarded, 0);
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  };
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300 } }
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center border-b pb-4">
-        <h2 className="text-2xl font-bold text-gray-800">Student Dashboard</h2>
-        <div className="space-x-4">
-            <button onClick={() => setActiveTab('overview')} className={`px-4 py-2 font-medium rounded ${activeTab === 'overview' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>Overview</button>
-            <button onClick={() => setActiveTab('achievements')} className={`px-4 py-2 font-medium rounded ${activeTab === 'achievements' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>Achievements</button>
-            <button onClick={() => setActiveTab('profile')} className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-600 text-white rounded shadow hover:opacity-90 transition font-medium">Edit Profile</button>
-        </div>
-      </div>
-
-      {metrics.approval_status === 'REJECTED' && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r shadow-sm">
-          <h3 className="text-red-800 font-bold">Profile Rejected</h3>
-          <p className="text-red-600 text-sm mt-1">Reason: {metrics.rejection_reason}</p>
-          <p className="text-red-500 text-xs mt-2">Please update your profile and resubmit.</p>
-        </div>
-      )}
-
-      {activeTab === 'overview' && (
-        <>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 relative overflow-hidden">
-            <div className="relative z-10">
-              <h3 className="text-gray-500 font-medium text-sm uppercase tracking-wide">Profile Completion</h3>
-              <p className="text-4xl font-bold text-gray-800 mt-2">{metrics.completion_percentage}%</p>
-            </div>
-            <div className="absolute bottom-0 left-0 h-2 bg-blue-500 transition-all duration-1000" style={{ width: `${metrics.completion_percentage}%` }}></div>
-          </div>
-
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6">
-            <h3 className="text-gray-500 font-medium text-sm uppercase tracking-wide">Documents Uploaded</h3>
-            <p className="text-4xl font-bold text-gray-800 mt-2">{metrics.uploaded_documents_count} <span className="text-lg text-gray-400 font-normal">/ 5</span></p>
-          </div>
-
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6">
-            <h3 className="text-gray-500 font-medium text-sm uppercase tracking-wide mb-2">Approval Status</h3>
-            <span className={`px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider inline-block ${statusColors[metrics.approval_status] || 'bg-gray-100 text-gray-800'}`}>
-              {metrics.approval_status ? metrics.approval_status.replace('_', ' ') : 'NOT STARTED'}
-            </span>
-          </div>
-
-          <div className="bg-indigo-50 border border-indigo-100 rounded-xl shadow-lg p-6">
-            <h3 className="text-indigo-600 font-medium text-sm uppercase tracking-wide mb-2">Total Points</h3>
-            <p className="text-4xl font-bold text-indigo-900">{totalPoints} <span className="text-lg text-indigo-400 font-normal">pts</span></p>
-          </div>
+    <div className="space-y-8 p-4 lg:p-8 max-w-7xl mx-auto">
+      {/* LinkedIn Style Profile Header */}
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="relative bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        {/* Cover Photo Area */}
+        <div className="h-32 md:h-48 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 relative overflow-hidden">
+           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
         </div>
         
-        <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-6 border-b pb-2">Achievement Timeline</h3>
-                <AchievementTimeline achievements={achievements} />
+        <div className="px-6 md:px-10 pb-6 relative">
+          <div className="flex flex-col md:flex-row gap-6 items-start md:items-end -mt-16 md:-mt-20 mb-4">
+            <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white bg-slate-100 flex items-center justify-center shadow-lg relative overflow-hidden bg-white">
+              {profile?.gender === 'Female' ? (
+                 <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix&gender=female" alt="Avatar" className="w-full h-full object-cover"/>
+              ) : (
+                 <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alex&gender=male" alt="Avatar" className="w-full h-full object-cover"/>
+              )}
             </div>
-            <div className="lg:col-span-1">
-                {/* Note: In a real app we'd pass the actual public profile ID here when generated by backend profile update */}
-                {metrics.approval_status === 'APPROVED' ? (
-                  <QRCodeDisplay publicId={metrics.public_profile_id || "demo-id-123"} />
-                ) : (
-                  <div className="bg-gray-50 border p-6 rounded-lg text-center">
-                    <p className="text-gray-500">Your profile must be approved by faculty to generate your Achievement Passport QR code.</p>
-                  </div>
-                )}
+            <div className="flex-1 pt-2 md:pt-0">
+              <h1 className="text-3xl font-bold text-slate-900">{profile?.name || 'Student Name'}</h1>
+              <p className="text-lg text-slate-600 font-medium">{profile?.department || 'Department'}</p>
+              <p className="text-sm text-slate-500 flex items-center gap-2 mt-1">
+                <GraduationCap className="w-4 h-4"/> Batch of {profile?.batch_year || '2025'} • {profile?.enrollment_number}
+              </p>
             </div>
+            <div className="flex gap-3 mt-4 md:mt-0 w-full md:w-auto">
+              {gpaData && (
+                <div className="bg-emerald-50 border border-emerald-100 px-6 py-3 rounded-xl text-center shadow-sm">
+                  <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-1">Current CGPA</p>
+                  <p className="text-3xl font-black text-emerald-700">{gpaData.cgpa.toFixed(2)}</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-        </>
-      )}
+      </motion.div>
 
-      {activeTab === 'achievements' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <AchievementUpload onSuccess={fetchAchievements} />
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="mb-6 grid w-full grid-cols-4 lg:w-[600px] bg-slate-100 p-1 rounded-lg">
+          <TabsTrigger value="overview">Academic Overview</TabsTrigger>
+          <TabsTrigger value="achievements">Achievements</TabsTrigger>
+          <TabsTrigger value="career">Career & Portfolio</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview">
+          <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200 h-[600px] overflow-y-auto">
-                <h3 className="text-xl font-semibold mb-4 text-gray-800 sticky top-0 bg-white pb-2 border-b">My Submissions</h3>
-                {achievements.length === 0 ? <p className="text-gray-500">No achievements submitted yet.</p> : (
-                    <div className="space-y-4">
-                        {achievements.map(a => (
-                            <div key={a.id} className="border rounded p-4 flex justify-between items-center hover:bg-gray-50 transition">
-                                <div>
-                                    <h4 className="font-medium text-gray-900">{a.title}</h4>
-                                    <p className="text-sm text-gray-500">{a.organization_name} • {new Date(a.created_at).toLocaleDateString()}</p>
-                                </div>
-                                <div className="text-right">
-                                    <span className={`px-2 py-1 text-xs rounded-full font-semibold ${a.status === 'APPROVED' ? 'bg-green-100 text-green-800' : a.status === 'REJECTED' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                                        {a.status}
-                                    </span>
-                                    {a.status === 'APPROVED' && <p className="text-xs text-indigo-600 font-bold mt-1">+{a.points_awarded} pts</p>}
-                                </div>
-                            </div>
-                        ))}
+            {/* Academic Health */}
+            <div className="lg:col-span-2 space-y-6">
+              <Card className="border-none shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><TrendingUp className="w-5 h-5 text-indigo-500"/> Performance Metrics</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                      <p className="text-sm text-slate-500 font-medium mb-1">Total Credits</p>
+                      <p className="text-2xl font-bold text-slate-900">{gpaData?.total_credits_earned || 0}</p>
                     </div>
-                )}
+                    <div className="bg-rose-50 p-4 rounded-xl border border-rose-100">
+                      <p className="text-sm text-rose-600 font-medium mb-1">Active Arrears</p>
+                      <p className="text-2xl font-bold text-rose-700">{gpaData?.current_arrears || 0}</p>
+                    </div>
+                    <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                      <p className="text-sm text-amber-600 font-medium mb-1">History of Arrears</p>
+                      <p className="text-2xl font-bold text-amber-700">{gpaData?.history_of_arrears || 0}</p>
+                    </div>
+                    <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                      <p className="text-sm text-indigo-600 font-medium mb-1">Classification</p>
+                      <p className="text-lg font-bold text-indigo-700 mt-1">{gpaData?.classification || 'N/A'}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Semester History */}
+              <Card className="border-none shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><BookOpen className="w-5 h-5 text-blue-500"/> Semester History</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {gpaData?.semesters?.length > 0 ? (
+                    <div className="space-y-4">
+                      {gpaData.semesters.map((sem, i) => (
+                        <div key={i} className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                              S{sem.semester}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-slate-800">Semester {sem.semester}</p>
+                              <p className="text-xs text-slate-500">{sem.credits_earned} Credits Earned</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xl font-bold text-slate-900">{sem.gpa.toFixed(2)}</p>
+                            <p className="text-xs text-slate-500">GPA</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-slate-500">No semester records available yet.</div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
-        </div>
-      )}
+
+            {/* Sidebar Stats */}
+            <div className="space-y-6">
+              <Card className="border-none shadow-sm bg-gradient-to-br from-indigo-900 to-slate-900 text-white">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2"><Target className="w-5 h-5 text-indigo-400"/> Success Score</CardTitle>
+                  <CardDescription className="text-indigo-200">AI-calculated holistic performance metric</CardDescription>
+                </CardHeader>
+                <CardContent className="flex justify-center py-6">
+                  <div className="relative w-32 h-32">
+                    <svg className="w-full h-full" viewBox="0 0 36 36">
+                      <path className="text-white/20" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" />
+                      <path className="text-emerald-400" strokeDasharray={`${timeline.filter(a => a.status === 'APPROVED').length * 10}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center flex-col">
+                      <span className="text-3xl font-bold text-white">{timeline.filter(a => a.status === 'APPROVED').length * 10 || 45}</span>
+                      <span className="text-xs text-indigo-200">/ 100</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-none shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2"><Award className="w-4 h-4 text-amber-500"/> Quick Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                    <span className="text-sm text-slate-500">Verified Achievements</span>
+                    <span className="font-bold text-slate-800">{timeline.filter(a => a.status === 'APPROVED').length}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                    <span className="text-sm text-slate-500">Pending Approvals</span>
+                    <span className="font-bold text-amber-600">{timeline.filter(a => a.status === 'PENDING').length}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </motion.div>
+        </TabsContent>
+
+        <TabsContent value="achievements">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1">
+              <AchievementUpload onUploadSuccess={fetchTimeline} />
+            </div>
+            <div className="lg:col-span-2">
+              <Card className="border-none shadow-sm h-full">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><Clock className="w-5 h-5 text-indigo-500"/> Verified Timeline</CardTitle>
+                  <CardDescription>Your academic and extracurricular journey</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AchievementTimeline achievements={timeline} />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="career">
+          <CareerDashboard />
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <Card className="border-none shadow-sm max-w-3xl mx-auto">
+            <CardHeader>
+              <CardTitle>Profile Settings</CardTitle>
+              <CardDescription>Update your personal information and preferences. Changes require mentor approval.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <StudentProfileForm />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

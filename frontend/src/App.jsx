@@ -28,7 +28,19 @@ function App() {
           <Route path="/portfolio/:studentId" element={<PortfolioPage />} />
           <Route path="/recruiter" element={<RecruiterPortal />} />
         </Routes>
-        <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
+        <ToastContainer 
+        position="top-right" 
+        autoClose={10000} 
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+        toastClassName="rounded-xl shadow-lg border border-slate-100"
+      />
       </div>
     </Router>
   );

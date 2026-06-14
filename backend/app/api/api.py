@@ -77,9 +77,14 @@ def register_admin(user_in: AdminRegister, db: Session = Depends(get_db)):
     return {"message": "Admin and Institute registered successfully", "institute_id": new_institute.institute_id}
 
 @router.post("/auth/register/faculty")
-def register_faculty(user_in: FacultyRegister, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role != "ADMIN":
-        raise HTTPException(status_code=403, detail="Only admins can register faculty")
+def register_faculty(user_in: FacultyRegister, db: Session = Depends(get_db)):
+    institute = db.query(Institute).filter(Institute.id == user_in.institute_id).first()
+    if not institute:
+        raise HTTPException(status_code=404, detail="Institution not found")
+        
+    domain = user_in.email.split('@')[-1]
+    if domain != institute.domain:
+        raise HTTPException(status_code=400, detail=f"Email domain must be @{institute.domain}")
     
     db_user = db.query(User).filter(User.email == user_in.email).first()
     if db_user:
@@ -89,9 +94,9 @@ def register_faculty(user_in: FacultyRegister, db: Session = Depends(get_db), cu
     new_user = User(
         email=user_in.email,
         hashed_password=hashed_password,
-        role="FACULTY",
+        role="FACULTY", # Default to faculty, admin can change later
         mobile_number=user_in.mobile_number,
-        institute_id=current_user.institute_id,  # Force admin's institute
+        institute_id=institute.id,
         department_id=user_in.department_id
     )
     db.add(new_user)
@@ -99,9 +104,14 @@ def register_faculty(user_in: FacultyRegister, db: Session = Depends(get_db), cu
     return {"message": "Faculty registered successfully"}
 
 @router.post("/auth/register/student")
-def register_student(user_in: StudentRegister, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    if current_user.role != "ADMIN":
-        raise HTTPException(status_code=403, detail="Only admins can register students")
+def register_student(user_in: StudentRegister, db: Session = Depends(get_db)):
+    institute = db.query(Institute).filter(Institute.id == user_in.institute_id).first()
+    if not institute:
+        raise HTTPException(status_code=404, detail="Institution not found")
+        
+    domain = user_in.email.split('@')[-1]
+    if domain != institute.domain:
+        raise HTTPException(status_code=400, detail=f"Email domain must be @{institute.domain}")
         
     db_user = db.query(User).filter(User.email == user_in.email).first()
     if db_user:
@@ -113,7 +123,7 @@ def register_student(user_in: StudentRegister, db: Session = Depends(get_db), cu
         hashed_password=hashed_password,
         role="STUDENT",
         mobile_number=user_in.mobile_number,
-        institute_id=current_user.institute_id,  # Force admin's institute
+        institute_id=institute.id,
         department_id=user_in.department_id
     )
     db.add(new_user)

@@ -25,9 +25,21 @@ router = APIRouter()
 
 # Anna University grade point mapping
 GRADE_POINTS = {
-    "O": 10, "A+": 9, "A": 8, "B+": 7, "B": 6, "C": 5, "U": 0
+    "O": 10, "A+": 9, "A": 8, "B+": 7, "B": 6, "C": 5, "RA": 0
 }
 VALID_GRADES = set(GRADE_POINTS.keys())
+
+def calculate_grade_from_marks(marks: int) -> str:
+    if marks >= 91: return "O"
+    if marks >= 81: return "A+"
+    if marks >= 71: return "A"
+    if marks >= 61: return "B+"
+    if marks >= 51: return "B"
+    if marks >= 45: return "C"
+    return "RA"
+
+def determine_pass_fail(grade: str) -> str:
+    return "FAIL" if grade == "RA" else "PASS"
 
 
 # ---------------------------------------------------------------------------
@@ -36,10 +48,16 @@ VALID_GRADES = set(GRADE_POINTS.keys())
 
 class StudentResult(BaseModel):
     student_id: uuid.UUID
-    grade: str
+    marks: Optional[int] = None
+    grade: Optional[str] = None
 
-    @validator("grade")
-    def validate_grade(cls, v):
+    @validator("grade", pre=True, always=True)
+    def validate_grade(cls, v, values):
+        marks = values.get("marks")
+        if marks is not None:
+            v = calculate_grade_from_marks(marks)
+        if not v:
+            raise ValueError("Either marks or grade must be provided")
         if v not in VALID_GRADES:
             raise ValueError(f"Invalid grade '{v}'. Must be one of: {sorted(VALID_GRADES)}")
         return v
@@ -116,7 +134,7 @@ def _compute_cgpa(gpa_records: List[m4.GPARecord]) -> float:
 
 def _handle_arrears(student_id: uuid.UUID, subject_id: uuid.UUID, grade: str, semester_id: uuid.UUID, db: Session):
     """Create or update ArrearRecord based on grade."""
-    if grade == "U":
+    if grade == "RA":
         # Add or update arrear record
         existing = db.query(m4.ArrearRecord).filter(
             m4.ArrearRecord.student_id == student_id,
@@ -182,7 +200,7 @@ def upload_results(
             raise HTTPException(status_code=404, detail=f"Student {r.student_id} not found")
 
         grade_point = float(GRADE_POINTS[r.grade])
-        result_status = "FAIL" if r.grade == "U" else "PASS"
+        result_status = determine_pass_fail(r.grade)
 
         # Upsert result
         existing = db.query(m4.SemesterResult).filter(

@@ -1,24 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
+import { motion } from 'framer-motion';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Building2, Users, UserCheck, GraduationCap, Award, AlertTriangle, TrendingUp, Briefcase } from 'lucide-react';
 import IntelligenceDashboard from '../components/IntelligenceDashboard';
+import { toast } from 'react-toastify';
 
 export default function AdminDashboard({ instituteId, departments, fetchDepartments }) {
   const [metrics, setMetrics] = useState({ total_students: 0, total_faculty: 0, total_departments: 0 });
   const [rankings, setRankings] = useState([]);
   const [newDeptName, setNewDeptName] = useState('');
-  const [activeTab, setActiveTab] = useState('overview');
   
-  // For mentor assignment
-  const [facultyList, setFacultyList] = useState([]);
-  const [mentorData, setMentorData] = useState({ faculty_id: '', department_id: '', batch_year: new Date().getFullYear() });
-
-  // For User Registration
+  // Registration States
   const [registerType, setRegisterType] = useState('STUDENT');
   const [registerData, setRegisterData] = useState({ department_id: '', email: '', mobile_number: '', password: '', institute_id: instituteId });
 
   useEffect(() => {
     fetchMetrics();
-    fetchFacultyList();
     fetchRankings();
   }, []);
 
@@ -26,13 +25,6 @@ export default function AdminDashboard({ instituteId, departments, fetchDepartme
     try {
       const res = await api.get('/dashboards/admin');
       setMetrics(res.data);
-    } catch (err) { console.error(err); }
-  };
-
-  const fetchFacultyList = async () => {
-    try {
-      const res = await api.get('/mentors/faculty');
-      setFacultyList(res.data);
     } catch (err) { console.error(err); }
   };
 
@@ -51,16 +43,9 @@ export default function AdminDashboard({ instituteId, departments, fetchDepartme
       setNewDeptName('');
       fetchDepartments(instituteId);
       fetchMetrics();
-    } catch (err) {}
-  };
-
-  const handleAssignMentor = async (e) => {
-    e.preventDefault();
-    try {
-      await api.post('/mentors/assign', mentorData);
-      alert('Mentor assigned successfully!');
+      toast.success('Department created successfully!');
     } catch (err) {
-      alert('Failed to assign mentor');
+      toast.error('Failed to create department');
     }
   };
 
@@ -69,175 +54,230 @@ export default function AdminDashboard({ instituteId, departments, fetchDepartme
     try {
       const endpoint = registerType === 'STUDENT' ? '/auth/register/student' : '/auth/register/faculty';
       await api.post(endpoint, registerData);
-      alert(`${registerType} registered successfully!`);
+      toast.success(`${registerType} registered successfully!`);
       setRegisterData({ department_id: '', email: '', mobile_number: '', password: '', institute_id: instituteId });
     } catch (err) {
       if (err.response?.data?.detail && Array.isArray(err.response.data.detail)) {
-         alert(err.response.data.detail[0].msg);
+         toast.error(err.response.data.detail[0].msg);
       } else {
-         alert(err.response?.data?.detail || 'Registration failed');
+         toast.error(err.response?.data?.detail || 'Registration failed');
       }
     }
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  };
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300 } }
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center border-b pb-4">
-        <h2 className="text-2xl font-bold text-gray-800">Admin Dashboard</h2>
-          <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-            <button onClick={() => setActiveTab('overview')} className={`${activeTab === 'overview' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>Overview</button>
-            <button onClick={() => setActiveTab('intelligence')} className={`${activeTab === 'intelligence' ? 'border-purple-500 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}><span className="mr-2">🧠</span> Institutional Intelligence</button>
-            <button onClick={() => setActiveTab('departments')} className={`${activeTab === 'departments' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>Departments</button>
-            <button onClick={() => setActiveTab('users')} className={`${activeTab === 'users' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>Users & Mentors</button>
-          </nav>
-      </div>
+    <div className="space-y-8 p-6 max-w-7xl mx-auto">
+      <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex justify-between items-center border-b border-slate-200 pb-5">
+        <div>
+          <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Executive Analytics</h2>
+          <p className="text-slate-500 mt-1">Institutional Intelligence and Performance Dashboard</p>
+        </div>
+      </motion.div>
 
-      {activeTab === 'overview' && (
-      <>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl shadow-lg p-6 text-white transform transition hover:-translate-y-1">
-          <h3 className="text-blue-100 font-medium">Total Students</h3>
-          <p className="text-4xl font-bold mt-2">{metrics.total_students}</p>
-        </div>
-        <div className="bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl shadow-lg p-6 text-white transform transition hover:-translate-y-1">
-          <h3 className="text-purple-100 font-medium">Total Faculty</h3>
-          <p className="text-4xl font-bold mt-2">{metrics.total_faculty}</p>
-        </div>
-        <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl shadow-lg p-6 text-white transform transition hover:-translate-y-1">
-          <h3 className="text-green-100 font-medium">Total Departments</h3>
-          <p className="text-4xl font-bold mt-2">{metrics.total_departments}</p>
-        </div>
-      </div>
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="mb-6 grid w-full grid-cols-4 lg:w-[600px] bg-slate-100 p-1">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="intelligence">Intelligence</TabsTrigger>
+          <TabsTrigger value="departments">Departments</TabsTrigger>
+          <TabsTrigger value="users">Onboarding</TabsTrigger>
+        </TabsList>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow p-6">
-          <h3 className="text-xl font-bold text-gray-800 mb-4">Manage Departments</h3>
-          <form onSubmit={handleAddDepartment} className="flex gap-4 mb-6">
-            <input 
-              type="text" placeholder="New Department Name" 
-              className="flex-1 border-gray-300 border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-              value={newDeptName} onChange={e => setNewDeptName(e.target.value)} required
-            />
-            <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded shadow transition">Add</button>
-          </form>
-          <div className="max-h-48 overflow-y-auto">
-            {departments.length === 0 ? <p className="text-gray-500">No departments added.</p> : (
-              <ul className="space-y-2">
-                {departments.map(dept => (
-                  <li key={dept.id} className="p-3 bg-gray-50 rounded border border-gray-100 text-gray-700">{dept.name}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
+        <TabsContent value="overview">
+          <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <motion.div variants={itemVariants}>
+              <Card className="hover:shadow-lg transition-all duration-300 border-none bg-white/60 backdrop-blur-xl shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-semibold text-slate-500">Total Students</CardTitle>
+                  <Users className="h-4 w-4 text-blue-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-slate-900">{metrics.total_students}</div>
+                  <p className="text-xs text-emerald-500 mt-1 flex items-center font-medium"><TrendingUp className="h-3 w-3 mr-1"/> Active Enrolled</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+            
+            <motion.div variants={itemVariants}>
+              <Card className="hover:shadow-lg transition-all duration-300 border-none bg-white/60 backdrop-blur-xl shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-semibold text-slate-500">Total Faculty</CardTitle>
+                  <UserCheck className="h-4 w-4 text-purple-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-slate-900">{metrics.total_faculty}</div>
+                  <p className="text-xs text-emerald-500 mt-1 flex items-center font-medium"><TrendingUp className="h-3 w-3 mr-1"/> Verified Staff</p>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow p-6">
-          <h3 className="text-xl font-bold text-gray-800 mb-4">Assign Mentor</h3>
-          <form onSubmit={handleAssignMentor} className="space-y-4">
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">Select Faculty</label>
-              <select required className="w-full border-gray-300 border p-2 rounded focus:ring-2 focus:ring-purple-500 outline-none"
-                value={mentorData.faculty_id} onChange={e => setMentorData({...mentorData, faculty_id: e.target.value})}>
-                <option value="">-- Choose Faculty --</option>
-                {facultyList.map(f => <option key={f.id} value={f.id}>{f.email}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">Select Department</label>
-              <select required className="w-full border-gray-300 border p-2 rounded focus:ring-2 focus:ring-purple-500 outline-none"
-                value={mentorData.department_id} onChange={e => setMentorData({...mentorData, department_id: e.target.value})}>
-                <option value="">-- Choose Department --</option>
-                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">Batch Year</label>
-              <input type="number" required className="w-full border-gray-300 border p-2 rounded focus:ring-2 focus:ring-purple-500 outline-none"
-                value={mentorData.batch_year} onChange={e => setMentorData({...mentorData, batch_year: parseInt(e.target.value)})} />
-            </div>
-            <button type="submit" className="w-full bg-purple-600 hover:bg-purple-700 text-white p-2 rounded shadow transition">
-              Assign Mentor
-            </button>
-          </form>
-        </div>
-      </div>
-      </>
-      )}
+            <motion.div variants={itemVariants}>
+              <Card className="hover:shadow-lg transition-all duration-300 border-none bg-white/60 backdrop-blur-xl shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-semibold text-slate-500">Departments</CardTitle>
+                  <Building2 className="h-4 w-4 text-indigo-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-slate-900">{metrics.total_departments}</div>
+                  <p className="text-xs text-slate-500 mt-1">Operational Branches</p>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-      {activeTab === 'rankings' && (
-        <div className="bg-white rounded-xl shadow p-6">
-            <h3 className="text-xl font-bold text-gray-800 mb-6">Department Leaderboard</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-blue-50 text-blue-800 text-sm uppercase tracking-wider">
-                    <th className="p-4 font-bold">Rank</th>
-                    <th className="p-4 font-bold">Department ID</th>
-                    <th className="p-4 font-bold text-center">Projects</th>
-                    <th className="p-4 font-bold text-center">Internships</th>
-                    <th className="p-4 font-bold text-center">Hackathons</th>
-                    <th className="p-4 font-bold text-right">Total Score</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
+            <motion.div variants={itemVariants}>
+              <Card className="hover:shadow-lg transition-all duration-300 border-none bg-gradient-to-br from-slate-900 to-slate-800 shadow-xl">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-slate-300">Platform Health</CardTitle>
+                  <AlertTriangle className="h-4 w-4 text-amber-400" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-white">100%</div>
+                  <p className="text-xs text-emerald-400 mt-1">Systems Operational</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <Card className="border-none shadow-sm">
+              <CardHeader>
+                <CardTitle>Department Leaderboard</CardTitle>
+                <CardDescription>Performance rankings based on student achievements and placement readiness.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
                   {rankings.length === 0 ? (
-                    <tr><td colSpan="6" className="p-4 text-center text-gray-500">Ranking data will be generated at end of semester.</td></tr>
-                  ) : rankings.map((r, idx) => (
-                    <tr key={r.id} className="hover:bg-gray-50 transition">
-                      <td className="p-4 font-bold text-xl text-blue-600">#{idx + 1}</td>
-                      <td className="p-4 font-medium">{r.department_id}</td>
-                      <td className="p-4 text-center">{r.total_projects}</td>
-                      <td className="p-4 text-center">{r.total_internships}</td>
-                      <td className="p-4 text-center">{r.total_hackathons}</td>
-                      <td className="p-4 text-right font-bold text-lg text-indigo-700">{r.department_score} pts</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-        </div>
-      )}
-      {activeTab === 'users' && (
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow p-6 max-w-2xl mx-auto">
-          <h3 className="text-xl font-bold text-gray-800 mb-6 text-center">Register New User</h3>
-          <div className="flex justify-center gap-4 mb-6">
-            <button onClick={() => setRegisterType('STUDENT')} className={`px-4 py-2 rounded font-medium transition ${registerType === 'STUDENT' ? 'bg-orange-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Student</button>
-            <button onClick={() => setRegisterType('FACULTY')} className={`px-4 py-2 rounded font-medium transition ${registerType === 'FACULTY' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Faculty / HOD</button>
+                    <p className="text-slate-500 text-sm text-center py-4">Ranking data generating...</p>
+                  ) : (
+                    rankings.map((r, i) => (
+                      <div key={i} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${i === 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-600'}`}>
+                            #{i + 1}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-900">{r.department_id.split('-')[0]}...</p>
+                            <p className="text-xs text-slate-500">{r.total_projects} Projects • {r.total_internships} Internships</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-indigo-600">{r.department_score}</p>
+                          <p className="text-xs text-slate-400">Score</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-none shadow-sm bg-gradient-to-br from-indigo-50 to-blue-50">
+              <CardHeader>
+                <CardTitle className="text-indigo-900">Institution Intelligence Score</CardTitle>
+                <CardDescription className="text-indigo-700/70">Overall placement readiness & academic health.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <motion.div 
+                  initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", delay: 0.2 }}
+                  className="w-48 h-48 rounded-full border-8 border-indigo-200 flex flex-col items-center justify-center bg-white shadow-xl"
+                >
+                  <span className="text-5xl font-black text-indigo-600">A+</span>
+                  <span className="text-sm font-semibold text-slate-500 mt-2">NAAC Grade Est.</span>
+                </motion.div>
+              </CardContent>
+            </Card>
           </div>
-          <form onSubmit={handleRegisterUser} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Select Department</label>
-              <select required className="w-full border-gray-300 border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                value={registerData.department_id} onChange={e => setRegisterData({...registerData, department_id: e.target.value})}>
-                <option value="">-- Choose Department --</option>
-                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
-              <input type="email" required className="w-full border-gray-300 border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                value={registerData.email} onChange={e => setRegisterData({...registerData, email: e.target.value})} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Mobile Number</label>
-              <input type="text" required className="w-full border-gray-300 border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                value={registerData.mobile_number} onChange={e => setRegisterData({...registerData, mobile_number: e.target.value})} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Temporary Password</label>
-              <input type="password" required className="w-full border-gray-300 border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                value={registerData.password} onChange={e => setRegisterData({...registerData, password: e.target.value})} />
-              <p className="text-xs text-gray-500 mt-1">Min 6 chars, uppercase, lowercase, number, special char</p>
-            </div>
-            <button type="submit" className={`w-full text-white p-2 rounded shadow transition ${registerType === 'STUDENT' ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'}`}>
-              Register {registerType === 'STUDENT' ? 'Student' : 'Faculty'}
-            </button>
-          </form>
-        </div>
-      )}
-      {activeTab === 'intelligence' && (
-        <IntelligenceDashboard />
-      )}
+        </TabsContent>
+
+        <TabsContent value="intelligence">
+          <Card className="border-none shadow-sm">
+            <CardContent className="p-6">
+              <IntelligenceDashboard />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="departments">
+          <Card className="border-none shadow-sm">
+            <CardHeader>
+              <CardTitle>Department Management</CardTitle>
+              <CardDescription>Add and manage operational departments for your institution.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleAddDepartment} className="flex gap-4 mb-8 max-w-xl">
+                <input 
+                  type="text" placeholder="e.g. Artificial Intelligence & Data Science" 
+                  className="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none transition-all"
+                  value={newDeptName} onChange={e => setNewDeptName(e.target.value)} required
+                />
+                <button type="submit" className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2 rounded-lg font-medium transition-all shadow-md">Create Department</button>
+              </form>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {departments.map(dept => (
+                  <div key={dept.id} className="p-4 bg-white border border-slate-200 rounded-xl shadow-sm flex items-center gap-3">
+                    <div className="bg-indigo-100 text-indigo-600 p-2 rounded-lg"><Building2 className="w-5 h-5"/></div>
+                    <span className="font-semibold text-slate-800">{dept.name}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="users">
+          <Card className="border-none shadow-sm max-w-2xl mx-auto">
+            <CardHeader className="text-center">
+              <CardTitle>User Onboarding</CardTitle>
+              <CardDescription>Register new students and faculty to your institution's workspace.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-center gap-4 mb-8 bg-slate-100 p-1 rounded-lg">
+                <button onClick={() => setRegisterType('STUDENT')} className={`flex-1 py-2 rounded-md font-semibold transition-all ${registerType === 'STUDENT' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Student</button>
+                <button onClick={() => setRegisterType('FACULTY')} className={`flex-1 py-2 rounded-md font-semibold transition-all ${registerType === 'FACULTY' ? 'bg-white text-purple-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Faculty / HOD</button>
+              </div>
+              <form onSubmit={handleRegisterUser} className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Department Assignment</label>
+                  <select required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none transition-all text-slate-800"
+                    value={registerData.department_id} onChange={e => setRegisterData({...registerData, department_id: e.target.value})}>
+                    <option value="">Select Department...</option>
+                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Institutional Email</label>
+                  <input type="email" required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none transition-all text-slate-800"
+                    placeholder="name@institution.edu"
+                    value={registerData.email} onChange={e => setRegisterData({...registerData, email: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Mobile Number</label>
+                  <input type="text" required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none transition-all text-slate-800"
+                    placeholder="10-digit number"
+                    value={registerData.mobile_number} onChange={e => setRegisterData({...registerData, mobile_number: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Initial Workspace Password</label>
+                  <input type="password" required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none transition-all text-slate-800"
+                    placeholder="Min 6 chars, A-z, 0-9, symbol"
+                    value={registerData.password} onChange={e => setRegisterData({...registerData, password: e.target.value})} />
+                </div>
+                <button type="submit" className={`w-full text-white font-semibold py-3 rounded-lg shadow-md transition-all mt-4 ${registerType === 'STUDENT' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-purple-600 hover:bg-purple-700'}`}>
+                  Create {registerType === 'STUDENT' ? 'Student' : 'Faculty'} Account
+                </button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

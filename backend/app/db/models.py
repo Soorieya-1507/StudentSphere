@@ -33,6 +33,8 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     role = Column(String, nullable=False) # 'ADMIN', 'FACULTY', 'HOD', 'MENTOR', 'STUDENT'
+    name = Column(String, nullable=True)
+    profile_photo_url = Column(String, nullable=True)
     mobile_number = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
